@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>Mitt budsjett</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <h1>💰 Mitt budsjett</h1>
+    <div class="month-nav">
+      <button id="prev-month" class="icon-btn" title="Forrige måned">‹</button>
+      <span id="month-label">–</span>
+      <button id="next-month" class="icon-btn" title="Neste måned">›</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Nøkkeltall -->
+    <section class="summary">
+      <div class="stat">
+        <span class="stat-label">Inntekt</span>
+        <span class="stat-value" id="sum-income">0 kr</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Budsjettert</span>
+        <span class="stat-value" id="sum-budget">0 kr</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Brukt</span>
+        <span class="stat-value" id="sum-spent">0 kr</span>
+      </div>
+      <div class="stat highlight">
+        <span class="stat-label">Igjen av inntekt</span>
+        <span class="stat-value" id="sum-left">0 kr</span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <!-- Venstre kolonne -->
+      <div class="col">
+        <!-- Inntekt -->
+        <section class="card">
+          <div class="card-head">
+            <h2>Inntekt denne måneden</h2>
+          </div>
+          <form id="income-form" class="row-form">
+            <input type="text" id="income-label" placeholder="F.eks. Lønn" required>
+            <input type="number" id="income-amount" placeholder="kr" min="0" step="1" required>
+            <button type="submit" class="btn">Legg til</button>
+          </form>
+          <ul id="income-list" class="list"></ul>
+        </section>
+
+        <!-- Ny utgift -->
+        <section class="card">
+          <div class="card-head">
+            <h2>Ny utgift</h2>
+          </div>
+          <form id="expense-form" class="expense-form">
+            <label>
+              Beløp
+              <input type="number" id="expense-amount" placeholder="0" min="0" step="1" required>
+            </label>
+            <label>
+              Kategori
+              <select id="expense-category" required></select>
+            </label>
+            <label>
+              Beskrivelse
+              <input type="text" id="expense-note" placeholder="F.eks. Rema 1000">
+            </label>
+            <label>
+              Dato
+              <input type="date" id="expense-date" required>
+            </label>
+            <button type="submit" class="btn primary">Legg til utgift</button>
+          </form>
+        </section>
+
+        <!-- Siste utgifter -->
+        <section class="card">
+          <div class="card-head">
+            <h2>Utgifter i måneden</h2>
+            <span class="muted" id="expense-count"></span>
+          </div>
+          <ul id="expense-list" class="list"></ul>
+        </section>
+      </div>
+
+      <!-- Høyre kolonne -->
+      <div class="col">
+        <section class="card">
+          <div class="card-head">
+            <h2>Kategorier og budsjett</h2>
+            <button id="copy-prev" class="btn small ghost" title="Kopier budsjettbeløpene fra forrige måned">Kopier forrige måned</button>
+          </div>
+          <p class="muted small">Skriv inn hvor mye du planlegger å bruke i hver kategori denne måneden.</p>
+          <ul id="category-list" class="categories"></ul>
+          <form id="category-form" class="row-form">
+            <input type="text" id="category-name" placeholder="Ny kategori, f.eks. Trening" required>
+            <button type="submit" class="btn">Legg til kategori</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Data</h2>
+          </div>
+          <p class="muted small">Alt lagres lokalt i nettleseren din. Ta en sikkerhetskopi hvis du bytter maskin.</p>
+          <div class="btn-row">
+            <button id="export-data" class="btn small">Eksporter (JSON)</button>
+            <button id="import-data" class="btn small">Importer</button>
+            <button id="reset-data" class="btn small danger">Nullstill alt</button>
+          </div>
+          <input type="file" id="import-file" accept="application/json" hidden>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
