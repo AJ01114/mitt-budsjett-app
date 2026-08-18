@@ -4,7 +4,7 @@ En enkel app for å budsjettere måned for måned: legg inn inntekt, sett et fas
 
 ## Hva den gjør
 
-- **Månedsvis budsjett** – bla mellom måneder med pilene øverst. Hver måned har sin egen inntekt, sine budsjettbeløp og sine utgifter.
+- **Månedsvis budsjett** – appen åpner alltid på inneværende måned, og hopper videre av seg selv når en ny måned begynner. Bla mellom måneder med pilene øverst; hver måned har sin egen inntekt, sine budsjettbeløp og sine utgifter.
 - **Inntekt** – legg inn én eller flere inntektslinjer (lønn, stipend, annet).
 - **Kategorier med fast beløp** – skriv f.eks. 4000 kr på «Mat og dagligvarer» for måneden.
 - **Utgifter** – beløp, kategori, beskrivelse og dato. Utgiften havner i måneden datoen tilhører.

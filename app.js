@@ -25,6 +25,8 @@ const monthName = new Intl.DateTimeFormat('nb-NO', { month: 'long', year: 'numer
 
 let state = load();
 let currentMonth = monthKey(new Date());
+/** Hvilken måned som var «i dag» sist vi sjekket – brukes til å oppdage månedsskifte. */
+let shownToday = currentMonth;
 
 function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -415,6 +417,31 @@ $('reset-data').addEventListener('click', () => {
   currentMonth = monthKey(new Date());
   render();
 });
+
+/* ---------- Månedsskifte ---------- */
+
+/**
+ * Hopper til den nye måneden når klokka passerer et månedsskifte mens appen
+ * står åpen. Har du bladd deg bort til en annen måned, står du der i fred.
+ */
+function syncToCurrentMonth() {
+  const today = monthKey(new Date());
+  if (today === shownToday) return;
+
+  const varPaaDagensManed = currentMonth === shownToday;
+  shownToday = today;
+  if (!varPaaDagensManed) return;
+
+  currentMonth = today;
+  $('expense-date').value = todayIso();
+  render();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncToCurrentMonth();
+});
+window.addEventListener('focus', syncToCurrentMonth);
+setInterval(syncToCurrentMonth, 60 * 1000);
 
 /* ---------- Oppstart ---------- */
 
