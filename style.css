@@ -162,6 +162,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 
 .row-form input[type="text"] { flex: 2 1 8rem; }
 .row-form input[type="number"] { flex: 1 1 5rem; }
+.row-form select { flex: 1 1 7rem; width: auto; }
 
 .expense-form {
   display: grid;
@@ -177,7 +178,32 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   color: var(--muted);
 }
 
-.expense-form button { grid-column: 1 / -1; }
+.expense-form button, .expense-form .wide { grid-column: 1 / -1; }
+
+/* Kontoer */
+.accounts { list-style: none; margin: 0; padding: 0; }
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.account:last-child { border-bottom: none; }
+.account .grow { flex: 1; min-width: 0; }
+.account .account-name { display: block; font-weight: 600; }
+.account .account-sub { display: block; font-size: .78rem; color: var(--muted); }
+
+.account .balance {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--good);
+}
+
+.account .balance.negative { color: var(--bad); }
 
 .btn {
   background: var(--bg-soft);

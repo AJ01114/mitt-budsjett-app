@@ -37,6 +37,10 @@
         <span class="stat-label">Igjen av inntekt</span>
         <span class="stat-value" id="sum-left">0 kr</span>
       </div>
+      <div class="stat">
+        <span class="stat-label">På konto nå</span>
+        <span class="stat-value" id="sum-balance">0 kr</span>
+      </div>
     </section>
 
     <div class="grid">
@@ -50,6 +54,7 @@
           <form id="income-form" class="row-form">
             <input type="text" id="income-label" placeholder="F.eks. Lønn" required>
             <input type="number" id="income-amount" placeholder="kr" min="0" step="1" required>
+            <select id="income-account" title="Hvilken konto pengene kommer inn på"></select>
             <button type="submit" class="btn">Legg til</button>
           </form>
           <ul id="income-list" class="list"></ul>
@@ -77,6 +82,10 @@
               Dato
               <input type="date" id="expense-date" required>
             </label>
+            <label class="wide">
+              Trekk fra konto
+              <select id="expense-account"></select>
+            </label>
             <button type="submit" class="btn primary">Legg til utgift</button>
           </form>
         </section>
@@ -93,6 +102,19 @@
 
       <!-- Høyre kolonne -->
       <div class="col">
+        <section class="card">
+          <div class="card-head">
+            <h2>Kontoer</h2>
+          </div>
+          <p class="muted small">Legg inn saldoen kontoen har i dag. Inntekter legges til og utgifter trekkes fra automatisk.</p>
+          <ul id="account-list" class="accounts"></ul>
+          <form id="account-form" class="row-form">
+            <input type="text" id="account-name" placeholder="F.eks. Brukskonto" required>
+            <input type="number" id="account-balance" placeholder="Saldo" step="1" required>
+            <button type="submit" class="btn">Legg til konto</button>
+          </form>
+        </section>
+
         <section class="card">
           <div class="card-head">
             <h2>Kategorier og budsjett</h2>

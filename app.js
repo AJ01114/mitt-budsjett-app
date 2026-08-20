@@ -51,15 +51,22 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.categories) && parsed.months) return parsed;
+      if (parsed && Array.isArray(parsed.categories) && parsed.months) return migrate(parsed);
     }
   } catch (err) {
     console.warn('Kunne ikke lese lagret data:', err);
   }
   return {
     categories: DEFAULT_CATEGORIES.map((name) => ({ id: newId(), name })),
+    accounts: [],
     months: {},
   };
+}
+
+/** Fyller inn felter som mangler i data lagret av eldre versjoner. */
+function migrate(data) {
+  if (!Array.isArray(data.accounts)) data.accounts = [];
+  return data;
 }
 
 function save() {
@@ -98,6 +105,37 @@ function spentInCategory(categoryId) {
     .reduce((sum, e) => sum + e.amount, 0);
 }
 
+/**
+ * Saldo på en konto: startsaldoen pluss alle inntekter inn, minus alle
+ * utgifter ut – på tvers av alle måneder, ikke bare den vi ser på.
+ */
+function accountBalance(account) {
+  let balance = account.startBalance;
+  for (const m of Object.values(state.months)) {
+    for (const income of m.income) {
+      if (income.accountId === account.id) balance += income.amount;
+    }
+    for (const expense of m.expenses) {
+      if (expense.accountId === account.id) balance -= expense.amount;
+    }
+  }
+  return balance;
+}
+
+function totalBalance() {
+  return state.accounts.reduce((sum, a) => sum + accountBalance(a), 0);
+}
+
+/** Antall bevegelser på kontoen – vises som liten undertekst. */
+function accountMovements(accountId) {
+  let count = 0;
+  for (const m of Object.values(state.months)) {
+    count += m.income.filter((i) => i.accountId === accountId).length;
+    count += m.expenses.filter((e) => e.accountId === accountId).length;
+  }
+  return count;
+}
+
 /* ---------- Rendering ---------- */
 
 const $ = (id) => document.getElementById(id);
@@ -107,6 +145,8 @@ function render() {
   $('month-label').textContent = monthName.format(new Date(year, mon - 1, 1));
 
   renderSummary();
+  renderAccounts();
+  renderAccountOptions();
   renderIncome();
   renderCategories();
   renderCategoryOptions();
@@ -126,6 +166,81 @@ function renderSummary() {
   leftEl.textContent = kr.format(left);
   leftEl.classList.toggle('negative', left < 0);
   leftEl.classList.toggle('positive', left >= 0 && income > 0);
+
+  const balance = totalBalance();
+  const balanceEl = $('sum-balance');
+  balanceEl.textContent = state.accounts.length ? kr.format(balance) : '–';
+  balanceEl.classList.toggle('negative', state.accounts.length > 0 && balance < 0);
+}
+
+function renderAccounts() {
+  const list = $('account-list');
+  list.replaceChildren();
+
+  if (state.accounts.length === 0) {
+    list.append(el('li', { class: 'empty', text: 'Ingen kontoer lagt inn ennå.' }));
+    return;
+  }
+
+  for (const account of state.accounts) {
+    const balance = accountBalance(account);
+    const movements = accountMovements(account.id);
+
+    const li = el('li', { class: 'account' });
+
+    const info = el('div', { class: 'grow' });
+    info.append(el('span', { class: 'account-name', text: account.name }));
+    info.append(
+      el('span', {
+        class: 'account-sub',
+        text: `Start ${kr.format(account.startBalance)} · ${movements} ${
+          movements === 1 ? 'bevegelse' : 'bevegelser'
+        }`,
+      })
+    );
+
+    const balanceEl = el('span', { class: 'balance', text: kr.format(balance) });
+    balanceEl.classList.toggle('negative', balance < 0);
+
+    li.append(
+      info,
+      balanceEl,
+      deleteButton(
+        `Slett kontoen «${account.name}»? Inntektene og utgiftene blir stående, men uten konto.`,
+        () => {
+          state.accounts = state.accounts.filter((a) => a.id !== account.id);
+          for (const m of Object.values(state.months)) {
+            for (const item of [...m.income, ...m.expenses]) {
+              if (item.accountId === account.id) item.accountId = null;
+            }
+          }
+        }
+      )
+    );
+    list.append(li);
+  }
+}
+
+/** Fyller begge konto-nedtrekkene, med «ingen konto» som første valg. */
+function renderAccountOptions() {
+  for (const id of ['income-account', 'expense-account']) {
+    const select = $(id);
+    const previous = select.value;
+    select.replaceChildren();
+
+    const none = el('option', { text: state.accounts.length ? '– ingen konto –' : 'Ingen konto lagt inn' });
+    none.value = '';
+    select.append(none);
+
+    for (const account of state.accounts) {
+      const option = el('option', { text: account.name });
+      option.value = account.id;
+      select.append(option);
+    }
+
+    if (previous && state.accounts.some((a) => a.id === previous)) select.value = previous;
+    else if (state.accounts.length === 1) select.value = state.accounts[0].id;
+  }
 }
 
 function renderIncome() {
@@ -138,9 +253,15 @@ function renderIncome() {
   }
 
   for (const item of month().income) {
+    const account = state.accounts.find((a) => a.id === item.accountId);
     const li = el('li');
+
+    const info = el('div', { class: 'grow' });
+    info.append(el('span', { class: 'title', text: item.label }));
+    if (account) info.append(el('span', { class: 'sub', text: `Inn på ${account.name}` }));
+
     li.append(
-      el('span', { class: 'grow title', text: item.label }),
+      info,
       el('span', { class: 'amount', text: kr.format(item.amount) }),
       deleteButton(`Slett inntekten «${item.label}»?`, () => {
         month().income = month().income.filter((i) => i.id !== item.id);
@@ -256,6 +377,7 @@ function renderExpenses() {
 
   for (const exp of expenses) {
     const cat = state.categories.find((c) => c.id === exp.categoryId);
+    const account = state.accounts.find((a) => a.id === exp.accountId);
     const li = el('li');
 
     const info = el('div', { class: 'grow' });
@@ -263,7 +385,9 @@ function renderExpenses() {
     info.append(
       el('span', {
         class: 'sub',
-        text: `${cat ? cat.name : 'Ukategorisert'} · ${formatDate(exp.date)}`,
+        text: `${cat ? cat.name : 'Ukategorisert'} · ${formatDate(exp.date)}${
+          account ? ` · ${account.name}` : ''
+        }`,
       })
     );
 
@@ -322,9 +446,28 @@ $('income-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const label = $('income-label').value.trim();
   const amount = Math.max(0, Number($('income-amount').value) || 0);
+  const accountId = $('income-account').value || null;
   if (!label || amount <= 0) return;
 
-  month().income.push({ id: newId(), label, amount });
+  month().income.push({ id: newId(), label, amount, accountId });
+  save();
+  event.target.reset();
+  render();
+  $('income-account').value = accountId || '';
+});
+
+$('account-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = $('account-name').value.trim();
+  const startBalance = Math.round(Number($('account-balance').value) || 0);
+  if (!name) return;
+
+  if (state.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
+    alert('Du har allerede en konto med det navnet.');
+    return;
+  }
+
+  state.accounts.push({ id: newId(), name, startBalance });
   save();
   event.target.reset();
   render();
@@ -350,6 +493,7 @@ $('expense-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const amount = Math.max(0, Number($('expense-amount').value) || 0);
   const categoryId = $('expense-category').value;
+  const accountId = $('expense-account').value || null;
   const note = $('expense-note').value.trim();
   const date = $('expense-date').value;
 
@@ -358,13 +502,15 @@ $('expense-form').addEventListener('submit', (event) => {
   // Utgiften havner i måneden datoen tilhører, ikke nødvendigvis den viste.
   const targetMonth = date.slice(0, 7);
   if (!state.months[targetMonth]) state.months[targetMonth] = emptyMonth();
-  state.months[targetMonth].expenses.push({ id: newId(), amount, categoryId, note, date });
+  state.months[targetMonth].expenses.push({ id: newId(), amount, categoryId, accountId, note, date });
 
   save();
   currentMonth = targetMonth;
   event.target.reset();
   $('expense-date').value = date;
   render();
+  // Behold kontoen som ble brukt sist – man handler stort sett fra samme konto.
+  $('expense-account').value = accountId || '';
 });
 
 $('copy-prev').addEventListener('click', () => {
@@ -400,7 +546,7 @@ $('import-file').addEventListener('change', async (event) => {
       throw new Error('Ugyldig format');
     }
     if (!confirm('Dette erstatter dataene du har nå. Fortsette?')) return;
-    state = parsed;
+    state = migrate(parsed);
     save();
     render();
   } catch (err) {
