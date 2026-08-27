@@ -24,6 +24,32 @@
   }
 }
 
+/* Diagramfarger. Valgt etter jobb, ikke smak: blå bærer magnitude og «inn»,
+   oransje er den andre serien, og statusfargene er reservert for tilstand. */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --chart-track: #eef1f5;
+  --chart-grid: #e1e0d9;
+  --chart-baseline: #c3c2b7;
+  --chart-tick: #898781;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --chart-track: #16202f;
+    --chart-grid: #2f3e52;
+    --chart-baseline: #3f5068;
+    --chart-tick: #94a3b8;
+  }
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -84,6 +110,137 @@ main {
   margin: 0 auto;
   padding: 1.5rem;
 }
+
+/* Faner */
+.tabs {
+  display: flex;
+  gap: .25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: .6rem 1rem;
+  font-weight: 600;
+  margin-bottom: -1px;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+.tab-panel[hidden] { display: none; }
+.tab-panel > .grid { margin: 0; }
+
+/* Diagrammer */
+.chart-wrap { margin-top: .5rem; overflow-x: auto; }
+.chart { display: block; max-width: 100%; }
+
+.chart-label, .chart-value, .chart-tick, .chart-empty {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+}
+
+.chart-label { fill: var(--muted); }
+.chart-value { fill: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-value.over { fill: var(--status-critical); }
+.chart-tick { fill: var(--chart-tick); font-variant-numeric: tabular-nums; }
+.chart-empty { fill: var(--muted); font-size: 12px; }
+
+.chart-track { fill: var(--chart-track); }
+.chart-fill-1 { fill: var(--series-1); }
+.chart-fill-2 { fill: var(--series-2); }
+.chart-fill-over { fill: var(--status-critical); }
+.chart-target { stroke: var(--text); stroke-width: 2; }
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-baseline { stroke: var(--chart-baseline); stroke-width: 1; }
+.chart-line { stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; }
+.chart-area { fill: var(--series-1); opacity: .14; }
+.chart-dot { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: .82rem;
+  color: var(--muted);
+  margin-bottom: .25rem;
+}
+
+.legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+
+.swatch {
+  width: .7rem;
+  height: .7rem;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.swatch-1 { background: var(--series-1); }
+.swatch-2 { background: var(--series-2); }
+
+/* Tabeller */
+.table-wrap { overflow-x: auto; margin-top: 1rem; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+}
+
+.data-table th, .data-table td {
+  padding: .45rem .5rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: .78rem;
+}
+
+.data-table th:first-child, .data-table td:first-child { text-align: left; }
+.data-table td { font-variant-numeric: tabular-nums; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tfoot td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
+.data-table .pos { color: var(--good); }
+.data-table .neg { color: var(--bad); }
+
+/* Råd */
+.advice { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+
+.advice li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .1rem .6rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+}
+
+.advice .advice-icon { grid-row: 1 / 4; font-size: 1rem; line-height: 1.3; }
+.advice .advice-title { font-weight: 600; }
+.advice .advice-text { font-size: .87rem; color: var(--muted); }
+.advice .advice-action { font-size: .87rem; }
+
+.advice li.critical { border-left-color: var(--status-critical); }
+.advice li.serious { border-left-color: var(--status-serious); }
+.advice li.warning { border-left-color: var(--status-warning); }
+.advice li.good { border-left-color: var(--status-good); }
+
+.advice li.critical .advice-title { color: var(--status-critical); }
+.advice li.good .advice-title { color: var(--status-good); }
 
 /* Nøkkeltall */
 .summary {

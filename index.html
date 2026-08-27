@@ -43,6 +43,13 @@
       </div>
     </section>
 
+    <nav class="tabs" role="tablist" aria-label="Visninger">
+      <button class="tab" role="tab" id="tab-btn-maaned" data-tab="maaned" aria-selected="true">Måned</button>
+      <button class="tab" role="tab" id="tab-btn-innsikt" data-tab="innsikt" aria-selected="false">Innsikt</button>
+      <button class="tab" role="tab" id="tab-btn-sparing" data-tab="sparing" aria-selected="false">Sparing</button>
+    </nav>
+
+    <div class="tab-panel" id="tab-maaned" role="tabpanel" aria-labelledby="tab-btn-maaned">
     <div class="grid">
       <!-- Venstre kolonne -->
       <div class="col">
@@ -186,9 +193,75 @@
         </section>
       </div>
     </div>
+    </div>
+
+    <!-- Innsikt -->
+    <div class="tab-panel" id="tab-innsikt" role="tabpanel" aria-labelledby="tab-btn-innsikt" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>Hva du kan gjøre bedre</h2>
+        </div>
+        <ul id="advice-list" class="advice"></ul>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Forbruk per kategori</h2>
+          <span class="muted small">denne måneden</span>
+        </div>
+        <p class="muted small">Streken viser hvor budsjettet går. Rødt er det som ligger over.</p>
+        <div id="chart-categories" class="chart-wrap"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Inn og ut per måned</h2>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><span class="swatch swatch-1"></span>Inn</span>
+          <span class="legend-item"><span class="swatch swatch-2"></span>Ut</span>
+        </div>
+        <div id="chart-months" class="chart-wrap"></div>
+        <div class="table-wrap">
+          <table class="data-table" id="months-table"></table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Største utgifter</h2>
+          <span class="muted small">denne måneden</span>
+        </div>
+        <ul id="top-expenses" class="list"></ul>
+      </section>
+    </div>
+
+    <!-- Sparing -->
+    <div class="tab-panel" id="tab-sparing" role="tabpanel" aria-labelledby="tab-btn-sparing" hidden>
+      <section class="summary" id="savings-stats"></section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Oppspart over tid</h2>
+        </div>
+        <div id="chart-savings" class="chart-wrap"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Sparetabell</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="savings-table"></table>
+        </div>
+        <p class="muted small" id="savings-forecast"></p>
+      </section>
+    </div>
   </main>
 
   <script src="bank-import.js"></script>
+  <script src="insights.js"></script>
+  <script src="charts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

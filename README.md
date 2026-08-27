@@ -11,6 +11,8 @@ En enkel app for å budsjettere måned for måned: legg inn inntekt, sett et fas
 - **Oversikt** – fargede søyler viser hvor mye av hver kategori som er brukt (grønn → gul over 80 % → rød når du er over).
 - **Mål og sparing i egen boks** – mål teller motsatt vei av utgifter: søyla er rød til du passerer beløpet, grønn når målet er nådd. Sparing ligger der fra start, og du kan legge til egne mål som «Ferie til Spania». 🎯-knappen flytter en post mellom utgifter og mål.
 - **Kontoer** – legg inn saldoen kontoen har. Inntekter legges til og utgifter trekkes fra automatisk, på tvers av måneder.
+- **Tre faner** – *Måned* er den daglige føringen, *Innsikt* viser diagrammer og konkrete råd, *Sparing* viser sparetabellen og hvordan det har utviklet seg.
+- **Hva du kan gjøre bedre** – appen leser sine egne tall og sier fra: kategorier over budsjett, forbruk som ligger an til å sprekke før måneden er omme, poster som har økt tre måneder på rad, forbruk uten budsjett, og sparerate mot 10–20 %-regelen. Positive funn kommer også med.
 - **Import fra nettbanken** – slipp en CSV fra Nordea, DNB eller Revolut inn i appen. Utgiftene kategoriseres automatisk etter butikknavn, transaksjoner du alt har importert hoppes over, og kategorien du velger manuelt huskes til neste gang.
 - **Kopier forrige måned** – gjenbruk budsjettbeløpene fra måneden før med ett klikk.
 - **Eksport / import** – ta sikkerhetskopi av dataene som JSON.
@@ -45,8 +47,14 @@ Alt lagres i nettleserens `localStorage` på maskinen du bruker – ingenting se
 | --- | --- |
 | `index.html` | Struktur og skjemaer |
 | `style.css` | Utseende, lys/mørkt tema følger systemet |
-| `app.js` | All logikk: lagring, utregning og rendering |
+| `app.js` | Lagring, faner og all rendering |
 | `bank-import.js` | Leser CSV fra nettbanken og gjetter format, dato, beløp og kategori |
+| `insights.js` | Månedssummer, sparetabell, tempoberegning og rådene |
+| `charts.js` | Diagrammene, tegnet som SVG uten bibliotek |
+
+## Om diagrammene
+
+Fargene er valgt etter hva de gjør, ikke etter smak: blå bærer størrelse og «inn», oransje er den andre serien, og rødt er reservert for tilstand – og følges alltid av et ord, aldri farge alene. Palettene er kjørt gjennom en kontrast- og fargeblindhetstest mot appens egne flater i både lys og mørk modus. Hvert diagram har en tabell eller direkte tallmerking ved siden av, så ingenting krever at du kan skille fargene.
 
 ## Om bankimport
 

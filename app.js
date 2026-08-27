@@ -163,6 +163,184 @@ function render() {
   renderCategories();
   renderCategoryOptions();
   renderExpenses();
+  renderInsights();
+  renderSavings();
+}
+
+/* ---------- Faner ---------- */
+
+function setTab(name) {
+  for (const button of document.querySelectorAll('.tab')) {
+    const valgt = button.dataset.tab === name;
+    button.setAttribute('aria-selected', String(valgt));
+    $(`tab-${button.dataset.tab}`).hidden = !valgt;
+  }
+}
+
+for (const button of document.querySelectorAll('.tab')) {
+  button.addEventListener('click', () => setTab(button.dataset.tab));
+}
+
+/* ---------- Innsikt ---------- */
+
+function renderInsights() {
+  renderAdvice();
+
+  const kategorier = Insights.categoryBreakdown(state, currentMonth);
+  $('chart-categories').replaceChildren(Charts.categoryBars(kategorier, kr.format));
+
+  const maaneder = Insights.recentMonths(state, currentMonth, 6);
+  $('chart-months').replaceChildren(Charts.incomeVsSpending(maaneder, kr.format));
+
+  buildTable(
+    $('months-table'),
+    ['Måned', 'Inn', 'Ut', 'Netto'],
+    maaneder.map((m) => [
+      { text: m.longLabel },
+      { text: kr.format(m.income) },
+      { text: kr.format(m.outgoing) },
+      { text: kr.format(m.net), class: m.net < 0 ? 'neg' : 'pos' },
+    ])
+  );
+
+  const storste = Insights.topExpenses(state, currentMonth, 5);
+  const liste = $('top-expenses');
+  liste.replaceChildren();
+  if (storste.length === 0) {
+    liste.append(el('li', { class: 'empty', text: 'Ingen utgifter denne måneden.' }));
+  } else {
+    for (const e of storste) {
+      const li = el('li');
+      const info = el('div', { class: 'grow' });
+      info.append(el('span', { class: 'title', text: e.note }));
+      info.append(el('span', { class: 'sub', text: formatDate(e.date) }));
+      li.append(info, el('span', { class: 'amount', text: kr.format(e.amount) }));
+      liste.append(li);
+    }
+  }
+}
+
+const ADVICE_ICONS = { critical: '🛑', serious: '⚠️', warning: '⚠️', good: '✅' };
+
+function renderAdvice() {
+  const list = $('advice-list');
+  list.replaceChildren();
+
+  const rad = Insights.advice(state, currentMonth, todayIso());
+  if (rad.length === 0) {
+    list.append(
+      el('li', {
+        class: 'empty',
+        text: 'Legg inn inntekt, budsjett og noen utgifter, så kommer rådene her.',
+      })
+    );
+    return;
+  }
+
+  for (const item of rad) {
+    const li = el('li', { class: item.level });
+    li.append(el('span', { class: 'advice-icon', text: ADVICE_ICONS[item.level] }));
+    li.append(el('span', { class: 'advice-title', text: item.title }));
+    li.append(el('span', { class: 'advice-text', text: item.text }));
+    if (item.action) li.append(el('span', { class: 'advice-action', text: item.action }));
+    list.append(li);
+  }
+}
+
+/* ---------- Sparing ---------- */
+
+function renderSavings() {
+  const rader = Insights.savingsRows(state, currentMonth, 12);
+  const prognose = Insights.savingsForecast(state, currentMonth);
+  const nadd = rader.filter((r) => r.reached).length;
+  const medMal = rader.filter((r) => r.target > 0).length;
+
+  const stats = $('savings-stats');
+  stats.replaceChildren();
+  statTile(stats, 'Oppspart totalt', kr.format(prognose ? prognose.total : 0), true);
+  statTile(stats, 'Snitt per måned', kr.format(prognose ? Math.round(prognose.average) : 0));
+  statTile(stats, 'Mål nådd', medMal ? `${nadd} av ${medMal}` : '–');
+  statTile(
+    stats,
+    'Spart siste 12 mnd',
+    kr.format(rader.reduce((sum, r) => sum + r.saved, 0))
+  );
+
+  $('chart-savings').replaceChildren(Charts.savingsArea(rader, kr.format));
+
+  buildTable(
+    $('savings-table'),
+    ['Måned', 'Mål', 'Spart', 'Avvik', 'Oppspart'],
+    rader.map((r) => [
+      { text: r.longLabel },
+      { text: r.target > 0 ? kr.format(r.target) : '–' },
+      { text: kr.format(r.saved) },
+      {
+        text: r.target > 0 ? `${r.diff >= 0 ? '+' : '−'}${kr.format(Math.abs(r.diff))}` : '–',
+        class: r.target > 0 ? (r.diff >= 0 ? 'pos' : 'neg') : '',
+      },
+      { text: kr.format(r.cumulative) },
+    ]),
+    rader.length
+      ? [
+          { text: 'Sum' },
+          { text: '' },
+          { text: kr.format(rader.reduce((sum, r) => sum + r.saved, 0)) },
+          { text: '' },
+          { text: kr.format(rader[rader.length - 1].cumulative) },
+        ]
+      : null
+  );
+
+  $('savings-forecast').textContent = prognose
+    ? `Snittet de siste ${prognose.months} ${
+        prognose.months === 1 ? 'måneden' : 'månedene'
+      } er ${kr.format(Math.round(prognose.average))} i måneden. Holder du det tempoet, står det ${kr.format(
+        Math.round(prognose.inTwelveMonths)
+      )} om ett år.`
+    : 'Sett et sparemål og før opp en overføring, så regner appen ut tempoet ditt her.';
+}
+
+function statTile(parent, label, value, highlight = false) {
+  const div = el('div', { class: highlight ? 'stat highlight' : 'stat' });
+  div.append(el('span', { class: 'stat-label', text: label }));
+  div.append(el('span', { class: 'stat-value', text: value }));
+  parent.append(div);
+}
+
+/** Bygger en tabell fra overskrifter og rader med {text, class}. */
+function buildTable(table, headers, rows, footer = null) {
+  table.replaceChildren();
+
+  const thead = el('thead');
+  const headRow = el('tr');
+  for (const h of headers) headRow.append(el('th', { text: h }));
+  thead.append(headRow);
+
+  const tbody = el('tbody');
+  if (rows.length === 0) {
+    const tr = el('tr');
+    const td = el('td', { text: 'Ingen tall ennå.' });
+    td.colSpan = headers.length;
+    tr.append(td);
+    tbody.append(tr);
+  } else {
+    for (const row of rows) {
+      const tr = el('tr');
+      for (const cell of row) tr.append(el('td', { class: cell.class || '', text: cell.text }));
+      tbody.append(tr);
+    }
+  }
+
+  table.append(thead, tbody);
+
+  if (footer) {
+    const tfoot = el('tfoot');
+    const tr = el('tr');
+    for (const cell of footer) tr.append(el('td', { class: cell.class || '', text: cell.text }));
+    tfoot.append(tr);
+    table.append(tfoot);
+  }
 }
 
 function renderSummary() {
