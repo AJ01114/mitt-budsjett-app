@@ -2,15 +2,17 @@
 
 const STORAGE_KEY = 'mitt-budsjett-v1';
 
+// Kategorier er enten utgiftsposter man vil holde seg under, eller mål man
+// vil komme over – som sparing. De to snur fargene i forhold til hverandre.
 const DEFAULT_CATEGORIES = [
-  'Mat og dagligvarer',
-  'Bolig og strøm',
-  'Transport',
-  'Abonnementer',
-  'Klær',
-  'Fritid',
-  'Sparing',
-  'Annet',
+  { name: 'Mat og dagligvarer' },
+  { name: 'Bolig og strøm' },
+  { name: 'Transport' },
+  { name: 'Abonnementer' },
+  { name: 'Klær' },
+  { name: 'Fritid' },
+  { name: 'Sparing', goal: true },
+  { name: 'Annet' },
 ];
 
 const kr = new Intl.NumberFormat('nb-NO', {
@@ -57,8 +59,9 @@ function load() {
     console.warn('Kunne ikke lese lagret data:', err);
   }
   return {
-    categories: DEFAULT_CATEGORIES.map((name) => ({ id: newId(), name })),
+    categories: DEFAULT_CATEGORIES.map((c) => ({ id: newId(), name: c.name, goal: c.goal === true })),
     accounts: [],
+    importRules: {},
     months: {},
   };
 }
@@ -66,6 +69,15 @@ function load() {
 /** Fyller inn felter som mangler i data lagret av eldre versjoner. */
 function migrate(data) {
   if (!Array.isArray(data.accounts)) data.accounts = [];
+  if (!data.importRules || typeof data.importRules !== 'object') data.importRules = {};
+
+  // Kategorier fra tidligere versjoner mangler goal-flagget. Sparing er et mål
+  // man vil over, ikke en utgift man vil under – resten er utgifter.
+  for (const category of data.categories) {
+    if (typeof category.goal !== 'boolean') {
+      category.goal = /sparing|sparekonto|spare/i.test(category.name);
+    }
+  }
   return data;
 }
 
@@ -223,7 +235,7 @@ function renderAccounts() {
 
 /** Fyller begge konto-nedtrekkene, med «ingen konto» som første valg. */
 function renderAccountOptions() {
-  for (const id of ['income-account', 'expense-account']) {
+  for (const id of ['income-account', 'expense-account', 'import-account']) {
     const select = $(id);
     const previous = select.value;
     select.replaceChildren();
@@ -292,13 +304,27 @@ function renderCategories() {
     const top = el('div', { class: 'category-top' });
     top.append(el('span', { class: 'category-name', text: cat.name }));
 
+    // Veksler mellom «hold deg under» og «kom over» for denne kategorien.
+    const goalToggle = el('button', { class: 'goal-toggle', text: '🎯' });
+    goalToggle.type = 'button';
+    goalToggle.classList.toggle('active', cat.goal);
+    goalToggle.title = cat.goal
+      ? `«${cat.name}» er et mål – grønn når du kommer over beløpet. Klikk for å gjøre den til en vanlig utgiftspost.`
+      : `«${cat.name}» er en utgiftspost – rød når du går over beløpet. Klikk for å gjøre den til et sparemål.`;
+    goalToggle.addEventListener('click', () => {
+      cat.goal = !cat.goal;
+      save();
+      render();
+    });
+    top.append(goalToggle);
+
     const input = el('input');
     input.type = 'number';
     input.min = '0';
     input.step = '1';
     input.placeholder = '0';
     input.value = budget || '';
-    input.title = 'Budsjett for denne måneden';
+    input.title = cat.goal ? 'Sparemål for denne måneden' : 'Budsjett for denne måneden';
     input.addEventListener('change', () => {
       const value = Math.max(0, Number(input.value) || 0);
       if (value > 0) month().budgets[cat.id] = value;
@@ -323,20 +349,50 @@ function renderCategories() {
       )
     );
 
+    const reached = budget > 0 && spent >= budget;
+
     const bar = el('div', { class: 'bar' });
     const fill = el('div');
     fill.style.width = `${pct}%`;
-    if (spent > budget) fill.classList.add('over');
-    else if (pct >= 80) fill.classList.add('warn');
+    if (cat.goal) {
+      // Målet er ikke nådd før du er over beløpet – da først blir den grønn.
+      if (!reached) fill.classList.add('pending');
+    } else if (spent > budget) {
+      fill.classList.add('over');
+    } else if (pct >= 80) {
+      fill.classList.add('warn');
+    }
     bar.append(fill);
 
     const meta = el('div', { class: 'category-meta' });
-    meta.append(el('span', { text: `${kr.format(spent)} av ${kr.format(budget)}` }));
     meta.append(
-      rest >= 0
-        ? el('span', { text: `${kr.format(rest)} igjen` })
-        : el('span', { class: 'over-text', text: `${kr.format(Math.abs(rest))} over` })
+      el('span', {
+        text: cat.goal
+          ? `${kr.format(spent)} spart av ${kr.format(budget)}`
+          : `${kr.format(spent)} av ${kr.format(budget)}`,
+      })
     );
+
+    if (cat.goal) {
+      if (budget <= 0) {
+        meta.append(el('span', { text: 'Sett et mål' }));
+      } else if (reached) {
+        meta.append(
+          el('span', {
+            class: 'goal-text',
+            text: rest === 0 ? 'Målet er nådd' : `${kr.format(Math.abs(rest))} over målet`,
+          })
+        );
+      } else {
+        meta.append(el('span', { class: 'over-text', text: `${kr.format(rest)} igjen til målet` }));
+      }
+    } else {
+      meta.append(
+        rest >= 0
+          ? el('span', { text: `${kr.format(rest)} igjen` })
+          : el('span', { class: 'over-text', text: `${kr.format(Math.abs(rest))} over` })
+      );
+    }
 
     li.append(top, bar, meta);
     list.append(li);
@@ -483,7 +539,7 @@ $('category-form').addEventListener('submit', (event) => {
     return;
   }
 
-  state.categories.push({ id: newId(), name });
+  state.categories.push({ id: newId(), name, goal: false });
   save();
   event.target.reset();
   render();
@@ -563,6 +619,217 @@ $('reset-data').addEventListener('click', () => {
   currentMonth = monthKey(new Date());
   render();
 });
+
+/* ---------- Import fra banken ---------- */
+
+/** Radene som venter på å bli lagt inn, mens forhåndsvisningen står åpen. */
+let pendingRows = null;
+
+/** Alle importnøkler som allerede finnes, brukt til å hoppe over duplikater. */
+function existingImportKeys() {
+  const keys = new Set();
+  for (const m of Object.values(state.months)) {
+    for (const item of [...m.income, ...m.expenses]) {
+      if (item.importKey) keys.add(item.importKey);
+    }
+  }
+  return keys;
+}
+
+function readStatement(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onerror = () => alert('Klarte ikke å lese fila.');
+  reader.onload = () => {
+    try {
+      showImportPreview(BankImport.parseStatement(String(reader.result)));
+    } catch (err) {
+      alert(err.message);
+      closeImportPreview();
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function showImportPreview({ transactions, skipped, warnings }) {
+  const seen = existingImportKeys();
+
+  pendingRows = transactions.map((t) => {
+    const key = BankImport.importKey(t);
+    return {
+      transaction: t,
+      key,
+      duplicate: seen.has(key),
+      categoryId: t.amount < 0 ? BankImport.suggestCategory(t.text, state.categories, state.importRules) : null,
+      include: !seen.has(key),
+    };
+  });
+
+  const nye = pendingRows.filter((r) => !r.duplicate).length;
+  const gamle = pendingRows.length - nye;
+
+  const summary = $('import-summary');
+  summary.replaceChildren();
+  summary.append(
+    el('span', {
+      text: `Fant ${transactions.length} transaksjoner – ${nye} nye${
+        gamle ? `, ${gamle} allerede importert` : ''
+      }${skipped ? `, ${skipped} hoppet over` : ''}.`,
+    })
+  );
+  for (const warning of warnings) {
+    summary.append(el('span', { class: 'warn-text', text: warning }));
+  }
+
+  renderImportRows();
+  $('import-preview').hidden = false;
+}
+
+function renderImportRows() {
+  const list = $('import-rows');
+  list.replaceChildren();
+
+  for (const row of pendingRows) {
+    const { transaction: t } = row;
+    const isIncome = t.amount > 0;
+
+    const li = el('li', { class: 'import-row' });
+    if (row.duplicate) li.classList.add('dupe');
+
+    const check = el('input');
+    check.type = 'checkbox';
+    check.checked = row.include;
+    check.addEventListener('change', () => {
+      row.include = check.checked;
+      updateImportButton();
+    });
+
+    const amountEl = el('span', {
+      class: 'row-amount',
+      text: kr.format(Math.round(Math.abs(t.amount))),
+    });
+    if (isIncome) amountEl.classList.add('income');
+
+    li.append(check, el('span', { class: 'row-text', text: t.text }), amountEl);
+    li.append(el('span', { class: 'row-sub', text: formatDate(t.date) }));
+
+    if (row.duplicate) {
+      li.append(el('span', { class: 'tag', text: 'Allerede importert' }));
+    } else if (isIncome) {
+      li.append(el('span', { class: 'tag', text: 'Legges inn som inntekt' }));
+    } else {
+      const select = el('select');
+      const none = el('option', { text: '– velg kategori –' });
+      none.value = '';
+      select.append(none);
+      for (const cat of state.categories) {
+        const option = el('option', { text: cat.name });
+        option.value = cat.id;
+        select.append(option);
+      }
+      select.value = row.categoryId || '';
+      select.addEventListener('change', () => {
+        row.categoryId = select.value || null;
+      });
+      li.append(select);
+    }
+
+    list.append(li);
+  }
+
+  updateImportButton();
+}
+
+function updateImportButton() {
+  const count = pendingRows ? pendingRows.filter((r) => r.include).length : 0;
+  $('import-confirm').textContent = count ? `Legg inn ${count}` : 'Legg inn';
+  $('import-confirm').disabled = count === 0;
+}
+
+function closeImportPreview() {
+  pendingRows = null;
+  $('import-preview').hidden = true;
+  $('import-rows').replaceChildren();
+  $('import-statement').value = '';
+}
+
+function confirmImport() {
+  if (!pendingRows) return;
+
+  const chosen = pendingRows.filter((r) => r.include);
+  const manglerKategori = chosen.filter((r) => r.transaction.amount < 0 && !r.categoryId);
+  if (manglerKategori.length > 0) {
+    alert(
+      `Velg kategori for ${manglerKategori.length} ${
+        manglerKategori.length === 1 ? 'utgift' : 'utgifter'
+      } før du legger dem inn, eller hak dem bort.`
+    );
+    return;
+  }
+
+  const accountId = $('import-account').value || null;
+  let sisteMaaned = currentMonth;
+
+  for (const row of chosen) {
+    const { transaction: t } = row;
+    const targetMonth = t.date.slice(0, 7);
+    if (!state.months[targetMonth]) state.months[targetMonth] = emptyMonth();
+    sisteMaaned = targetMonth;
+
+    if (t.amount > 0) {
+      state.months[targetMonth].income.push({
+        id: newId(),
+        label: t.text,
+        amount: Math.round(t.amount),
+        accountId,
+        importKey: row.key,
+      });
+    } else {
+      state.months[targetMonth].expenses.push({
+        id: newId(),
+        amount: Math.round(Math.abs(t.amount)),
+        categoryId: row.categoryId,
+        accountId,
+        note: t.text,
+        date: t.date,
+        importKey: row.key,
+      });
+      // Husk valget, slik at samme butikk treffer riktig neste gang.
+      state.importRules[BankImport.merchantKey(t.text)] = row.categoryId;
+    }
+  }
+
+  save();
+  closeImportPreview();
+  currentMonth = sisteMaaned;
+  render();
+}
+
+$('dropzone').addEventListener('click', () => $('import-statement').click());
+$('dropzone').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    $('import-statement').click();
+  }
+});
+
+$('dropzone').addEventListener('dragover', (event) => {
+  event.preventDefault();
+  $('dropzone').classList.add('over');
+});
+
+$('dropzone').addEventListener('dragleave', () => $('dropzone').classList.remove('over'));
+
+$('dropzone').addEventListener('drop', (event) => {
+  event.preventDefault();
+  $('dropzone').classList.remove('over');
+  readStatement(event.dataTransfer.files[0]);
+});
+
+$('import-statement').addEventListener('change', (event) => readStatement(event.target.files[0]));
+$('import-confirm').addEventListener('click', confirmImport);
+$('import-cancel').addEventListener('click', closeImportPreview);
 
 /* ---------- Månedsskifte ---------- */
 

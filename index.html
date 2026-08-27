@@ -90,6 +90,35 @@
           </form>
         </section>
 
+        <!-- Import fra banken -->
+        <section class="card">
+          <div class="card-head">
+            <h2>Importer fra banken</h2>
+          </div>
+          <p class="muted small">
+            Last ned transaksjonene som CSV fra nettbanken – Nordea: <em>Kontoutskrift → Last ned</em>,
+            Revolut: <em>Statement → Excel/CSV</em> – og slipp fila her. Utgiftene kategoriseres
+            automatisk, og de du alt har importert hoppes over.
+          </p>
+          <label class="import-account">
+            Kontoen utskriften gjelder
+            <select id="import-account"></select>
+          </label>
+          <div id="dropzone" class="dropzone" tabindex="0" role="button">
+            <strong>Slipp CSV-fila her</strong>
+            <span class="muted small">eller klikk for å velge fil</span>
+          </div>
+          <input type="file" id="import-statement" accept=".csv,text/csv,text/plain" hidden>
+          <div id="import-preview" class="import-preview" hidden>
+            <p id="import-summary" class="import-summary"></p>
+            <ul id="import-rows" class="import-rows"></ul>
+            <div class="btn-row">
+              <button id="import-confirm" class="btn primary" type="button">Legg inn</button>
+              <button id="import-cancel" class="btn" type="button">Avbryt</button>
+            </div>
+          </div>
+        </section>
+
         <!-- Siste utgifter -->
         <section class="card">
           <div class="card-head">
@@ -144,6 +173,7 @@
     </div>
   </main>
 
+  <script src="bank-import.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
