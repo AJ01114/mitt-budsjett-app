@@ -157,6 +157,21 @@
           </form>
         </section>
 
+        <!-- Mål og sparing -->
+        <section class="card">
+          <div class="card-head">
+            <h2>🎯 Mål og sparing</h2>
+            <span class="muted small" id="goal-progress"></span>
+          </div>
+          <p class="muted small">Her teller det motsatte vei: søyla er rød til du passerer beløpet, og grønn når målet er nådd.</p>
+          <ul id="goal-list" class="categories"></ul>
+          <form id="goal-form" class="row-form">
+            <input type="text" id="goal-name" placeholder="Nytt mål, f.eks. Ferie til Spania" required>
+            <input type="number" id="goal-amount" placeholder="Beløp" min="0" step="1">
+            <button type="submit" class="btn">Legg til mål</button>
+          </form>
+        </section>
+
         <section class="card">
           <div class="card-head">
             <h2>Data</h2>

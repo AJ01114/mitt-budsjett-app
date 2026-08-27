@@ -283,16 +283,35 @@ function renderIncome() {
   }
 }
 
+/** Utgiftspostene og målene bor i hver sin boks, men bygges av samme rad. */
 function renderCategories() {
-  const list = $('category-list');
+  const utgifter = state.categories.filter((c) => !c.goal);
+  const mal = state.categories.filter((c) => c.goal);
+
+  fillCategoryList($('category-list'), utgifter, 'Ingen kategorier. Legg til én under.');
+  fillCategoryList($('goal-list'), mal, 'Ingen mål ennå. Legg til ett under.');
+  renderGoalProgress(mal);
+}
+
+/** Kort status i overskriften på målboksen: «2 av 3 nådd». */
+function renderGoalProgress(mal) {
+  const medBelop = mal.filter((c) => (month().budgets[c.id] || 0) > 0);
+  const nadd = medBelop.filter((c) => spentInCategory(c.id) >= month().budgets[c.id]).length;
+
+  $('goal-progress').textContent = medBelop.length
+    ? `${nadd} av ${medBelop.length} nådd`
+    : '';
+}
+
+function fillCategoryList(list, categories, emptyText) {
   list.replaceChildren();
 
-  if (state.categories.length === 0) {
-    list.append(el('li', { class: 'empty', text: 'Ingen kategorier. Legg til én under.' }));
+  if (categories.length === 0) {
+    list.append(el('li', { class: 'empty', text: emptyText }));
     return;
   }
 
-  for (const cat of state.categories) {
+  for (const cat of categories) {
     const budget = month().budgets[cat.id] || 0;
     const spent = spentInCategory(cat.id);
     const rest = budget - spent;
@@ -309,8 +328,8 @@ function renderCategories() {
     goalToggle.type = 'button';
     goalToggle.classList.toggle('active', cat.goal);
     goalToggle.title = cat.goal
-      ? `«${cat.name}» er et mål – grønn når du kommer over beløpet. Klikk for å gjøre den til en vanlig utgiftspost.`
-      : `«${cat.name}» er en utgiftspost – rød når du går over beløpet. Klikk for å gjøre den til et sparemål.`;
+      ? `«${cat.name}» er et mål. Klikk for å flytte den tilbake til vanlige utgifter.`
+      : `«${cat.name}» er en utgiftspost. Klikk for å flytte den til Mål og sparing.`;
     goalToggle.addEventListener('click', () => {
       cat.goal = !cat.goal;
       save();
@@ -336,7 +355,9 @@ function renderCategories() {
 
     top.append(
       deleteButton(
-        `Slett kategorien «${cat.name}»? Utgifter i den blir flyttet til «Ukategorisert».`,
+        cat.goal
+          ? `Slett målet «${cat.name}»? Det du har lagt inn på det blir stående, men uten kategori.`
+          : `Slett kategorien «${cat.name}»? Utgifter i den blir flyttet til «Ukategorisert».`,
         () => {
           state.categories = state.categories.filter((c) => c.id !== cat.id);
           for (const m of Object.values(state.months)) {
@@ -540,6 +561,26 @@ $('category-form').addEventListener('submit', (event) => {
   }
 
   state.categories.push({ id: newId(), name, goal: false });
+  save();
+  event.target.reset();
+  render();
+});
+
+$('goal-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = $('goal-name').value.trim();
+  const amount = Math.max(0, Number($('goal-amount').value) || 0);
+  if (!name) return;
+
+  if (state.categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+    alert('Du har allerede en kategori eller et mål med det navnet.');
+    return;
+  }
+
+  const goal = { id: newId(), name, goal: true };
+  state.categories.push(goal);
+  if (amount > 0) month().budgets[goal.id] = amount;
+
   save();
   event.target.reset();
   render();

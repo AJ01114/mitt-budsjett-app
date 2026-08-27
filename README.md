@@ -9,7 +9,7 @@ En enkel app for å budsjettere måned for måned: legg inn inntekt, sett et fas
 - **Kategorier med fast beløp** – skriv f.eks. 4000 kr på «Mat og dagligvarer» for måneden.
 - **Utgifter** – beløp, kategori, beskrivelse og dato. Utgiften havner i måneden datoen tilhører.
 - **Oversikt** – fargede søyler viser hvor mye av hver kategori som er brukt (grønn → gul over 80 % → rød når du er over).
-- **Mål i stedet for tak** – klikk 🎯 på en kategori for å snu logikken: da er søyla rød til du passerer beløpet og grønn når du er over. Sparing er satt opp som mål fra start; ferie, nedbetaling og andre spareposter kan settes på samme måte.
+- **Mål og sparing i egen boks** – mål teller motsatt vei av utgifter: søyla er rød til du passerer beløpet, grønn når målet er nådd. Sparing ligger der fra start, og du kan legge til egne mål som «Ferie til Spania». 🎯-knappen flytter en post mellom utgifter og mål.
 - **Kontoer** – legg inn saldoen kontoen har. Inntekter legges til og utgifter trekkes fra automatisk, på tvers av måneder.
 - **Import fra nettbanken** – slipp en CSV fra Nordea, DNB eller Revolut inn i appen. Utgiftene kategoriseres automatisk etter butikknavn, transaksjoner du alt har importert hoppes over, og kategorien du velger manuelt huskes til neste gang.
 - **Kopier forrige måned** – gjenbruk budsjettbeløpene fra måneden før med ett klikk.
