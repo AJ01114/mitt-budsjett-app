@@ -29,6 +29,9 @@ let state = load();
 let currentMonth = monthKey(new Date());
 /** Hvilken måned som var «i dag» sist vi sjekket – brukes til å oppdage månedsskifte. */
 let shownToday = currentMonth;
+/** Kategorien som står utfoldet med betalingene sine, og om den viser hele historikken. */
+let expandedCategory = null;
+let expandedAllMonths = false;
 
 function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -187,7 +190,17 @@ function renderInsights() {
   renderAdvice();
 
   const kategorier = Insights.categoryBreakdown(state, currentMonth);
-  $('chart-categories').replaceChildren(Charts.categoryBars(kategorier, kr.format));
+  $('chart-categories').replaceChildren(
+    Charts.categoryBars(kategorier, kr.format, (categoryId) => {
+      // Klikk i diagrammet tar deg til betalingene i månedsfanen.
+      expandedCategory = categoryId;
+      expandedAllMonths = false;
+      setTab('maaned');
+      render();
+      const rad = $('category-list').querySelector('[aria-expanded="true"]');
+      rad?.scrollIntoView?.({ block: 'center' });
+    })
+  );
 
   const maaneder = Insights.recentMonths(state, currentMonth, 6);
   $('chart-months').replaceChildren(Charts.incomeVsSpending(maaneder, kr.format));
@@ -499,7 +512,19 @@ function fillCategoryList(list, categories, emptyText) {
     const li = el('li', { class: 'category' });
 
     const top = el('div', { class: 'category-top' });
-    top.append(el('span', { class: 'category-name', text: cat.name }));
+
+    // Navnet er en knapp: den folder ut alle betalingene i kategorien.
+    const utvidet = expandedCategory === cat.id;
+    const nameButton = el('button', { class: 'category-name', text: cat.name });
+    nameButton.type = 'button';
+    nameButton.setAttribute('aria-expanded', String(utvidet));
+    nameButton.title = utvidet ? 'Skjul betalingene' : `Vis betalingene i «${cat.name}»`;
+    nameButton.addEventListener('click', () => {
+      expandedCategory = utvidet ? null : cat.id;
+      if (!utvidet) expandedAllMonths = false;
+      render();
+    });
+    top.append(nameButton);
 
     // Veksler mellom «hold deg under» og «kom over» for denne kategorien.
     const goalToggle = el('button', { class: 'goal-toggle', text: '🎯' });
@@ -594,8 +619,86 @@ function fillCategoryList(list, categories, emptyText) {
     }
 
     li.append(top, bar, meta);
+    if (utvidet) li.append(categoryDetail(cat));
     list.append(li);
   }
+}
+
+/** Alle betalingene i én kategori – denne måneden, eller hele historikken. */
+function categoryExpenses(categoryId, allMonths) {
+  const rows = [];
+  const kilder = allMonths ? Object.entries(state.months) : [[currentMonth, month()]];
+
+  for (const [key, m] of kilder) {
+    for (const e of m.expenses) {
+      if (e.categoryId === categoryId) rows.push({ ...e, monthKey: key });
+    }
+  }
+  return rows.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function categoryDetail(cat) {
+  const alle = expandedAllMonths;
+  const rows = categoryExpenses(cat.id, alle);
+  const total = rows.reduce((sum, e) => sum + e.amount, 0);
+
+  const box = el('div', { class: 'category-detail' });
+
+  const head = el('div', { class: 'detail-head' });
+  head.append(
+    el('span', {
+      class: 'muted small',
+      text: rows.length
+        ? `${rows.length} ${rows.length === 1 ? 'betaling' : 'betalinger'} · ${kr.format(total)}${
+            alle ? ' i alt' : ''
+          }`
+        : alle
+          ? 'Ingen betalinger registrert.'
+          : 'Ingen betalinger denne måneden.',
+    })
+  );
+
+  const toggle = el('button', {
+    class: 'btn small ghost',
+    text: alle ? 'Bare denne måneden' : 'Vis alle måneder',
+  });
+  toggle.type = 'button';
+  toggle.addEventListener('click', () => {
+    expandedAllMonths = !expandedAllMonths;
+    render();
+  });
+  head.append(toggle);
+  box.append(head);
+
+  if (rows.length > 0) {
+    const list = el('ul', { class: 'list detail-list' });
+    for (const e of rows) {
+      const account = state.accounts.find((a) => a.id === e.accountId);
+      const li = el('li');
+
+      const info = el('div', { class: 'grow' });
+      info.append(el('span', { class: 'title', text: e.note || cat.name }));
+      info.append(
+        el('span', {
+          class: 'sub',
+          text: `${formatDate(e.date)}${account ? ` · ${account.name}` : ''}`,
+        })
+      );
+
+      li.append(
+        info,
+        el('span', { class: 'amount', text: kr.format(e.amount) }),
+        deleteButton(null, () => {
+          const m = state.months[e.monthKey];
+          m.expenses = m.expenses.filter((x) => x.id !== e.id);
+        })
+      );
+      list.append(li);
+    }
+    box.append(list);
+  }
+
+  return box;
 }
 
 function renderCategoryOptions() {

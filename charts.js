@@ -78,7 +78,7 @@ const Charts = (() => {
    * Liggende stolper, størst først. Blått fram til budsjettet, rødt for det
    * som ligger over, med en markør der budsjettet går.
    */
-  function categoryBars(items, fmt) {
+  function categoryBars(items, fmt, onSelect) {
     const rows = items.filter((c) => c.spent > 0);
     if (rows.length === 0) return tomtDiagram('Ingen utgifter å vise ennå.');
 
@@ -98,7 +98,27 @@ const Charts = (() => {
       const y = i * rowH + 8;
       const barY = y + 3;
 
-      svg.append(
+      // Hele raden er klikkbar og fører til betalingene i kategorien.
+      let rad = svg;
+      if (onSelect) {
+        rad = node('g', { class: 'chart-row', role: 'button', tabindex: '0' });
+        rad.addEventListener('click', () => onSelect(c.id));
+        rad.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect(c.id);
+          }
+        });
+        rad.append(
+          tip(
+            node('rect', { x: 0, y, width: W, height: rowH, class: 'chart-hit' }),
+            `Vis betalingene i ${c.name}`
+          )
+        );
+        svg.append(rad);
+      }
+
+      rad.append(
         text(kort(c.name, 20), {
           x: labelW - 10,
           y: barY + barH - 2,
@@ -108,20 +128,20 @@ const Charts = (() => {
       );
 
       // Sporet bak stolpen viser hvor mye plass budsjettet tar.
-      svg.append(
+      rad.append(
         node('rect', { x: plotX, y: barY, width: plotW, height: barH, rx: 4, class: 'chart-track' })
       );
 
       const innenfor = c.budget > 0 ? Math.min(c.spent, c.budget) : c.spent;
       const wInnenfor = (innenfor / maks) * plotW;
       const bar = node('path', { d: barPathH(plotX, barY, wInnenfor, barH), class: 'chart-fill-1' });
-      svg.append(tip(bar, `${c.name}: ${fmt(c.spent)}`));
+      rad.append(tip(bar, `${c.name}: ${fmt(c.spent)}`));
 
       if (c.over) {
         // 2px luft mellom de to delene, så overskridelsen leses som sin egen bit.
         const xOver = plotX + wInnenfor + 2;
         const wOver = Math.max(((c.spent - c.budget) / maks) * plotW - 2, 1);
-        svg.append(
+        rad.append(
           tip(
             node('path', { d: barPathH(xOver, barY, wOver, barH), class: 'chart-fill-over' }),
             `${fmt(c.spent - c.budget)} over budsjettet på ${fmt(c.budget)}`
@@ -129,7 +149,7 @@ const Charts = (() => {
         );
       } else if (c.budget > 0) {
         const xTarget = plotX + (c.budget / maks) * plotW;
-        svg.append(
+        rad.append(
           tip(
             node('line', {
               x1: xTarget,
@@ -143,7 +163,7 @@ const Charts = (() => {
         );
       }
 
-      svg.append(
+      rad.append(
         text(c.over ? `${fmt(c.spent)} over` : fmt(c.spent), {
           x: W,
           y: barY + barH - 2,

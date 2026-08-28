@@ -10,6 +10,7 @@ En enkel app for å budsjettere måned for måned: legg inn inntekt, sett et fas
 - **Utgifter** – beløp, kategori, beskrivelse og dato. Utgiften havner i måneden datoen tilhører.
 - **Oversikt** – fargede søyler viser hvor mye av hver kategori som er brukt (grønn → gul over 80 % → rød når du er over).
 - **Mål og sparing i egen boks** – mål teller motsatt vei av utgifter: søyla er rød til du passerer beløpet, grønn når målet er nådd. Sparing ligger der fra start, og du kan legge til egne mål som «Ferie til Spania». 🎯-knappen flytter en post mellom utgifter og mål.
+- **Klikk på en kategori** for å se alle betalingene i den – f.eks. hva de 720 kronene på «Abonnementer» faktisk gikk til. Bytt mellom denne måneden og hele historikken, og slett enkeltbetalinger derfra. Radene i kategoridiagrammet under Innsikt fører til det samme.
 - **Kontoer** – legg inn saldoen kontoen har. Inntekter legges til og utgifter trekkes fra automatisk, på tvers av måneder.
 - **Tre faner** – *Måned* er den daglige føringen, *Innsikt* viser diagrammer og konkrete råd, *Sparing* viser sparetabellen og hvordan det har utviklet seg.
 - **Hva du kan gjøre bedre** – appen leser sine egne tall og sier fra: kategorier over budsjett, forbruk som ligger an til å sprekke før måneden er omme, poster som har økt tre måneder på rad, forbruk uten budsjett, og sparerate mot 10–20 %-regelen. Positive funn kommer også med.
